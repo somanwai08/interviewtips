@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宏任务与微任务详解 - 掌握执行顺序</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #4CAF50;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #666;
+            margin-top: 20px;
+        }
+        .key-point {
+            background: #fffacd;
+            padding: 15px;
+            border-left: 4px solid #ffd700;
+            margin: 15px 0;
+        }
+        .code-block {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .output {
+            background: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .step {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 10px;
+            margin: 8px 0;
+        }
+        .warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .example {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .practice-btn {
+            background: #2196F3;
+        }
+        .practice-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 JavaScript 宏任务与微任务 - 完全掌握指南</h1>
+
+    <div class="section">
+        <h2>📚 一、核心概念速记</h2>
+        
+        <div class="key-point">
+            <h3>🔑 记住这个执行顺序口诀：</h3>
+            <strong style="font-size: 18px; color: #d32f2f;">
+                同步 → 微任务 → 宏任务<br>
+                (Sync → Microtask → Macrotask)
+            </strong>
+        </div>
+
+        <h3>常见任务分类表：</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>类型</th>
+                    <th>任务</th>
+                    <th>记忆技巧</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>同步任务</strong></td>
+                    <td>console.log()、普通代码、async 函数调用、await 表达式本身、await 前面的代码</td>
+                    <td>立即执行，不等待</td>
+                </tr>
+                <tr>
+                    <td rowspan="4"><strong>微任务 (Microtask)</strong></td>
+                    <td>Promise.then()</td>
+                    <td rowspan="4">Promise相关、MutationObserver<br><strong>优先级高</strong></td>
+                </tr>
+                <tr>
+                    <td>Promise.catch()</td>
+                </tr>
+                <tr>
+                    <td>Promise.finally()</td>
+                </tr>
+                <tr>
+                    <td>await 后面的代码、MutationObserver</td>
+                </tr>
+                <tr>
+                    <td rowspan="4"><strong>宏任务 (Macrotask)</strong></td>
+                    <td>setTimeout()</td>
+                    <td rowspan="4">定时器、I/O操作<br><strong>优先级低</strong></td>
+                </tr>
+                <tr>
+                    <td>setInterval()</td>
+                </tr>
+                <tr>
+                    <td>setImmediate() (Node.js)</td>
+                </tr>
+                <tr>
+                    <td>I/O操作、UI渲染</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>🎓 二、Event Loop 事件循环机制</h2>
+        
+        <div class="key-point">
+            <h3>执行流程（死记硬背这5步）：</h3>
+            <div class="step">1️⃣ 执行<strong>所有同步代码</strong>（主线程代码）</div>
+            <div class="step">2️⃣ 同步代码执行完后，检查<strong>微任务队列</strong></div>
+            <div class="step">3️⃣ 执行<strong>所有微任务</strong>（清空微任务队列）</div>
+            <div class="step">4️⃣ 执行<strong>一个宏任务</strong>（从宏任务队列中取出一个）</div>
+            <div class="step">5️⃣ 重复步骤2-4（回到检查微任务队列）</div>
+        </div>
+
+        <div class="key-point" style="background: #e3f2fd; border-left: 4px solid #2196F3;">
+            <h3>📝 Event Loop Execution Flow (For English Interviews):</h3>
+            <div class="step" style="background: white;">
+                <strong>Step 1:</strong> Execute <strong>all synchronous code</strong> in the call stack
+            </div>
+            <div class="step" style="background: white;">
+                <strong>Step 2:</strong> Once the call stack is empty, <strong>check the microtask queue</strong>
+            </div>
+            <div class="step" style="background: white;">
+                <strong>Step 3:</strong> Execute <strong>all microtasks</strong> until the microtask queue is empty
+            </div>
+            <div class="step" style="background: white;">
+                <strong>Step 4:</strong> Execute <strong>one macrotask</strong> from the macrotask queue
+            </div>
+            <div class="step" style="background: white;">
+                <strong>Step 5:</strong> Repeat steps 2-4 (go back to check microtask queue)
+            </div>
+            
+            <div style="margin-top: 15px; padding: 10px; background: #fff3e0; border-radius: 4px;">
+                <strong>💬 Interview Answer Template:</strong>
+                <p style="margin: 10px 0; line-height: 1.6;">
+                    "The Event Loop is JavaScript's mechanism for handling asynchronous operations. 
+                    Here's how it works: First, all synchronous code executes on the call stack. 
+                    When the stack is empty, the Event Loop checks the microtask queue and executes 
+                    all microtasks (like Promise callbacks). After clearing the microtask queue, 
+                    it takes one macrotask from the macrotask queue (like setTimeout), executes it, 
+                    and then repeats the process. This ensures microtasks always have higher priority 
+                    than macrotasks."
+                </p>
+            </div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ 注意：</strong>
+            <ul>
+                <li>微任务队列会<strong>一次性清空</strong>（执行完所有微任务）</li>
+                <li>宏任务队列<strong>每次只执行一个</strong>，执行完后再检查微任务</li>
+                <li>Promise构造函数内的代码是<strong>同步执行</strong>的</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>💡 三、典型例题解析</h2>
+
+        <!-- 例题1 -->
+        <div class="example">
+            <h3>例题1：基础题（必须掌握）</h3>
+            <div class="code-block">
+<pre>console.log('1');
+
+setTimeout(() => {
+    console.log('2');
+}, 0);
+
+Promise.resolve().then(() => {
+    console.log('3');
+});
+
+console.log('4');</pre>
+            </div>
+            <button onclick="runExample1()">运行例题1</button>
+            <button onclick="showAnswer1()" class="practice-btn">查看详解</button>
+            <div id="answer1" style="display:none;" class="output">
+                <h4>输出顺序：1 → 4 → 3 → 2</h4>
+                <p><strong>解析步骤：</strong></p>
+                <ol>
+                    <li>执行同步代码：打印 <code>1</code></li>
+                    <li>遇到 setTimeout（宏任务），放入宏任务队列</li>
+                    <li>遇到 Promise.then（微任务），放入微任务队列</li>
+                    <li>执行同步代码：打印 <code>4</code></li>
+                    <li>同步代码执行完，检查微任务队列，执行打印 <code>3</code></li>
+                    <li>微任务队列清空，执行一个宏任务，打印 <code>2</code></li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- 例题2 -->
+        <div class="example">
+            <h3>例题2：Promise构造函数（易错点）</h3>
+            <div class="code-block">
+<pre>console.log('start');
+
+new Promise((resolve) => {
+    console.log('promise1');
+    resolve();
+    console.log('promise2');
+}).then(() => {
+    console.log('then');
+});
+
+console.log('end');</pre>
+            </div>
+            <button onclick="runExample2()">运行例题2</button>
+            <button onclick="showAnswer2()" class="practice-btn">查看详解</button>
+            <div id="answer2" style="display:none;" class="output">
+                <h4>输出顺序：start → promise1 → promise2 → end → then</h4>
+                <p><strong>解析步骤：</strong></p>
+                <ol>
+                    <li>同步代码：打印 <code>start</code></li>
+                    <li><strong>⚠️ 关键：</strong>Promise构造函数内的代码是<strong>同步执行</strong>的！打印 <code>promise1</code></li>
+                    <li>执行 resolve()（只是改变状态，不会立即执行then）</li>
+                    <li>继续同步代码：打印 <code>promise2</code></li>
+                    <li>then回调（微任务）放入微任务队列</li>
+                    <li>同步代码：打印 <code>end</code></li>
+                    <li>同步代码执行完，执行微任务：打印 <code>then</code></li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- 例题3 -->
+        <div class="example">
+            <h3>例题3：多个定时器和Promise（进阶）</h3>
+            <div class="code-block">
+<pre>setTimeout(() => {
+    console.log('timeout1');
+    Promise.resolve().then(() => {
+        console.log('promise1');
+    });
+}, 0);
+
+setTimeout(() => {
+    console.log('timeout2');
+}, 0);
+
+Promise.resolve().then(() => {
+    console.log('promise2');
+});
+
+console.log('sync');</pre>
+            </div>
+            <button onclick="runExample3()">运行例题3</button>
+            <button onclick="showAnswer3()" class="practice-btn">查看详解</button>
+            <div id="answer3" style="display:none;" class="output">
+                <h4>输出顺序：sync → promise2 → timeout1 → promise1 → timeout2</h4>
+                <p><strong>解析步骤（画图理解）：</strong></p>
+                <ol>
+                    <li>同步代码：打印 <code>sync</code></li>
+                    <li>微任务队列：[promise2]，宏任务队列：[timeout1, timeout2]</li>
+                    <li>执行微任务：打印 <code>promise2</code></li>
+                    <li>执行第一个宏任务：打印 <code>timeout1</code>，产生新微任务 promise1</li>
+                    <li><strong>⚠️ 关键：</strong>立即检查微任务队列，执行打印 <code>promise1</code></li>
+                    <li>执行第二个宏任务：打印 <code>timeout2</code></li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- 例题4 -->
+        <div class="example">
+            <h3>例题4：async/await（高频考点）</h3>
+            <div class="code-block">
+<pre>async function async1() {
+    console.log('async1 start');
+    await async2();
+    console.log('async1 end');
+}
+
+async function async2() {
+    console.log('async2');
+}
+
+console.log('script start');
+
+setTimeout(() => {
+    console.log('setTimeout');
+}, 0);
+
+async1();
+
+new Promise((resolve) => {
+    console.log('promise1');
+    resolve();
+}).then(() => {
+    console.log('promise2');
+});
+
+console.log('script end');</pre>
+            </div>
+            <button onclick="runExample4()">运行例题4</button>
+            <button onclick="showAnswer4()" class="practice-btn">查看详解</button>
+            <div id="answer4" style="display:none;" class="output">
+                <h4>输出顺序：script start → async1 start → async2 → promise1 → script end → async1 end → promise2 → setTimeout</h4>
+                <p><strong>解析步骤（重点理解 await）：</strong></p>
+                <ol>
+                    <li>同步代码：打印 <code>script start</code></li>
+                    <li>setTimeout 放入宏任务队列</li>
+                    <li>调用 async1()，打印 <code>async1 start</code></li>
+                    <li>执行 await async2()，进入 async2，打印 <code>async2</code></li>
+                    <li><strong>⚠️ 关键：</strong>await 后面的代码（async1 end）相当于放入微任务队列</li>
+                    <li>Promise构造函数同步执行：打印 <code>promise1</code></li>
+                    <li>then回调放入微任务队列</li>
+                    <li>同步代码：打印 <code>script end</code></li>
+                    <li>微任务队列：[async1 end, promise2]，依次执行</li>
+                    <li>最后执行宏任务：打印 <code>setTimeout</code></li>
+                </ol>
+                <div class="warning">
+                    <strong>await 的本质：</strong>
+                    <code>await xxx</code> 相当于 <code>Promise.resolve(xxx).then(...)</code>
+                    <br>所以 await 后面的代码会被当作微任务处理
+                </div>
+            </div>
+        </div>
+
+        <!-- 例题5 -->
+        <div class="example">
+            <h3>例题5：综合练习（面试难度）</h3>
+            <div class="code-block">
+<pre>console.log('1');
+
+setTimeout(() => {
+    console.log('2');
+    Promise.resolve().then(() => {
+        console.log('3');
+    });
+});
+
+new Promise((resolve, reject) => {
+    console.log('4');
+    resolve('5');
+}).then((data) => {
+    console.log(data);
+    
+    Promise.resolve().then(() => {
+        console.log('6');
+    }).then(() => {
+        console.log('7');
+        
+        setTimeout(() => {
+            console.log('8');
+        }, 0);
+    });
+});
+
+setTimeout(() => {
+    console.log('9');
+});
+
+console.log('10');</pre>
+            </div>
+            <button onclick="runExample5()">运行例题5</button>
+            <button onclick="showAnswer5()" class="practice-btn">查看详解</button>
+            <div id="answer5" style="display:none;" class="output">
+                <h4>输出顺序：1 → 4 → 10 → 5 → 6 → 7 → 2 → 3 → 9 → 8</h4>
+                <p><strong>解析步骤（建议画图）：</strong></p>
+                <ol>
+                    <li>同步：<code>1</code></li>
+                    <li>setTimeout放入宏任务队列</li>
+                    <li>Promise构造函数同步执行：<code>4</code></li>
+                    <li>then放入微任务队列</li>
+                    <li>setTimeout放入宏任务队列</li>
+                    <li>同步：<code>10</code></li>
+                    <li>执行微任务打印 <code>5</code>，产生新的微任务链</li>
+                    <li>微任务 <code>6</code></li>
+                    <li>微任务 <code>7</code>，产生新的宏任务</li>
+                    <li>执行第一个宏任务：<code>2</code>，产生微任务 <code>3</code></li>
+                    <li>立即执行微任务：<code>3</code></li>
+                    <li>执行下一个宏任务：<code>9</code></li>
+                    <li>执行最后的宏任务：<code>8</code></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🎯 四、解题技巧总结</h2>
+        
+        <div class="key-point">
+            <h3>📝 三步解题法（推荐）：</h3>
+            <ol style="font-size: 16px; line-height: 1.8;">
+                <li><strong>第一步：标记代码类型</strong>
+                    <ul>
+                        <li>用不同颜色或符号标记：同步(S)、微任务(Mi)、宏任务(Ma)</li>
+                    </ul>
+                </li>
+                <li><strong>第二步：画三个队列</strong>
+                    <ul>
+                        <li>执行栈（同步代码）</li>
+                        <li>微任务队列</li>
+                        <li>宏任务队列</li>
+                    </ul>
+                </li>
+                <li><strong>第三步：按规则执行</strong>
+                    <ul>
+                        <li>执行栈清空 → 清空微任务队列 → 执行一个宏任务 → 循环</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ 常见错误点：</h3>
+            <ol>
+                <li><strong>误认为 Promise 构造函数是异步的</strong> - 实际是同步的！</li>
+                <li><strong>忘记 await 后的代码是微任务</strong> - await 等价于 .then()</li>
+                <li><strong>以为宏任务会一次性执行完</strong> - 实际每次只执行一个</li>
+                <li><strong>忽略微任务中产生的新微任务</strong> - 会在当前轮次继续执行</li>
+                <li><strong>setTimeout(fn, 0) 不是立即执行</strong> - 它是宏任务，排在微任务之后</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🏃 五、练习题（自测）</h2>
+        
+        <div class="example">
+            <h3>练习题1：</h3>
+            <div class="code-block">
+<pre>Promise.resolve().then(() => {
+    console.log('Promise1');
+    setTimeout(() => {
+        console.log('setTimeout2');
+    }, 0);
+});
+
+setTimeout(() => {
+    console.log('setTimeout1');
+    Promise.resolve().then(() => {
+        console.log('Promise2');
+    });
+}, 0);</pre>
+            </div>
+            <button onclick="runPractice1()">运行练习1</button>
+            <button onclick="showPracticeAnswer1()" class="practice-btn">查看答案</button>
+            <div id="practiceAnswer1" style="display:none;" class="output">
+                <h4>答案：Promise1 → setTimeout1 → Promise2 → setTimeout2</h4>
+            </div>
+        </div>
+
+        <div class="example">
+            <h3>练习题2：</h3>
+            <div class="code-block">
+<pre>async function async1() {
+    console.log('async1 start');
+    await async2();
+    console.log('async1 end');
+}
+
+async function async2() {
+    console.log('async2');
+}
+
+console.log('script start');
+
+setTimeout(() => {
+    console.log('setTimeout');
+}, 0);
+
+async1();
+
+new Promise(resolve => {
+    console.log('promise1');
+    resolve();
+}).then(() => {
+    console.log('promise2');
+}).then(() => {
+    console.log('promise3');
+});
+
+console.log('script end');</pre>
+            </div>
+            <button onclick="runPractice2()">运行练习2</button>
+            <button onclick="showPracticeAnswer2()" class="practice-btn">查看答案</button>
+            <div id="practiceAnswer2" style="display:none;" class="output">
+                <h4>答案：script start → async1 start → async2 → promise1 → script end → async1 end → promise2 → promise3 → setTimeout</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📚 六、记忆口诀</h2>
+        <div class="key-point" style="font-size: 18px; text-align: center; padding: 30px;">
+            <p><strong>同步任务先执行，</strong></p>
+            <p><strong>微任务紧跟后，</strong></p>
+            <p><strong>宏任务排最后。</strong></p>
+            <p style="margin-top: 20px;"><strong>Promise构造同步跑，</strong></p>
+            <p><strong>then/catch/await都是微，</strong></p>
+            <p><strong>定时器都是宏。</strong></p>
+            <p style="margin-top: 20px; color: #d32f2f;"><strong>微任务清空再宏任务，</strong></p>
+            <p style="color: #d32f2f;"><strong>宏任务每次只一个！</strong></p>
+        </div>
+    </div>
+
+    <script>
+        // 例题1
+        function runExample1() {
+            console.clear();
+            console.log('=== 开始执行例题1 ===');
+            
+            console.log('1');
+
+            setTimeout(() => {
+                console.log('2');
+            }, 0);
+
+            Promise.resolve().then(() => {
+                console.log('3');
+            });
+
+            console.log('4');
+        }
+
+        function showAnswer1() {
+            document.getElementById('answer1').style.display = 'block';
+        }
+
+        // 例题2
+        function runExample2() {
+            console.clear();
+            console.log('=== 开始执行例题2 ===');
+            
+            console.log('start');
+
+            new Promise((resolve) => {
+                console.log('promise1');
+                resolve();
+                console.log('promise2');
+            }).then(() => {
+                console.log('then');
+            });
+
+            console.log('end');
+        }
+
+        function showAnswer2() {
+            document.getElementById('answer2').style.display = 'block';
+        }
+
+        // 例题3
+        function runExample3() {
+            console.clear();
+            console.log('=== 开始执行例题3 ===');
+            
+            setTimeout(() => {
+                console.log('timeout1');
+                Promise.resolve().then(() => {
+                    console.log('promise1');
+                });
+            }, 0);
+
+            setTimeout(() => {
+                console.log('timeout2');
+            }, 0);
+
+            Promise.resolve().then(() => {
+                console.log('promise2');
+            });
+
+            console.log('sync');
+        }
+
+        function showAnswer3() {
+            document.getElementById('answer3').style.display = 'block';
+        }
+
+        // 例题4
+        function runExample4() {
+            console.clear();
+            console.log('=== 开始执行例题4 ===');
+            
+            async function async1() {
+                console.log('async1 start');
+                await async2();
+                console.log('async1 end');
+            }
+
+            async function async2() {
+                console.log('async2');
+            }
+
+            console.log('script start');
+
+            setTimeout(() => {
+                console.log('setTimeout');
+            }, 0);
+
+            async1();
+
+            new Promise((resolve) => {
+                console.log('promise1');
+                resolve();
+            }).then(() => {
+                console.log('promise2');
+            });
+
+            console.log('script end');
+        }
+
+        function showAnswer4() {
+            document.getElementById('answer4').style.display = 'block';
+        }
+
+        // 例题5
+        function runExample5() {
+            console.clear();
+            console.log('=== 开始执行例题5 ===');
+            
+            console.log('1');
+
+            setTimeout(() => {
+                console.log('2');
+                Promise.resolve().then(() => {
+                    console.log('3');
+                });
+            });
+
+            new Promise((resolve, reject) => {
+                console.log('4');
+                resolve('5');
+            }).then((data) => {
+                console.log(data);
+                
+                Promise.resolve().then(() => {
+                    console.log('6');
+                }).then(() => {
+                    console.log('7');
+                    
+                    setTimeout(() => {
+                        console.log('8');
+                    }, 0);
+                });
+            });
+
+            setTimeout(() => {
+                console.log('9');
+            });
+
+            console.log('10');
+        }
+
+        function showAnswer5() {
+            document.getElementById('answer5').style.display = 'block';
+        }
+
+        // 练习题1
+        function runPractice1() {
+            console.clear();
+            console.log('=== 开始执行练习1 ===');
+            
+            Promise.resolve().then(() => {
+                console.log('Promise1');
+                setTimeout(() => {
+                    console.log('setTimeout2');
+                }, 0);
+            });
+
+            setTimeout(() => {
+                console.log('setTimeout1');
+                Promise.resolve().then(() => {
+                    console.log('Promise2');
+                });
+            }, 0);
+        }
+
+        function showPracticeAnswer1() {
+            document.getElementById('practiceAnswer1').style.display = 'block';
+        }
+
+        // 练习题2
+        function runPractice2() {
+            console.clear();
+            console.log('=== 开始执行练习2 ===');
+            
+            async function async1() {
+                console.log('async1 start');
+                await async2();
+                console.log('async1 end');
+            }
+
+            async function async2() {
+                console.log('async2');
+            }
+
+            console.log('script start');
+
+            setTimeout(() => {
+                console.log('setTimeout');
+            }, 0);
+
+            async1();
+
+            new Promise(resolve => {
+                console.log('promise1');
+                resolve();
+            }).then(() => {
+                console.log('promise2');
+            }).then(() => {
+                console.log('promise3');
+            });
+
+            console.log('script end');
+        }
+
+        function showPracticeAnswer2() {
+            document.getElementById('practiceAnswer2').style.display = 'block';
+        }
+
+        // 页面加载提示
+        console.log('%c欢迎学习宏任务和微任务！', 'color: #4CAF50; font-size: 20px; font-weight: bold;');
+        console.log('%c打开浏览器控制台查看执行结果', 'color: #2196F3; font-size: 14px;');
+
+        // ========== Promise 嵌套测试函数 ==========
+        function testPromiseNested1() {
+            console.clear();
+            console.log('%c========== 例题1：经典嵌套 Promise ==========', 'color: #4CAF50; font-size: 16px; font-weight: bold;');
+            
+            console.log('start');
+
+            new Promise((resolve) => {
+                console.log('promise1');
+                resolve();
+            })
+            .then(() => {
+                console.log('then1');
+                return new Promise((resolve) => {
+                    console.log('promise2');
+                    resolve();
+                })
+                .then(() => {
+                    console.log('then2');
+                });
+            })
+            .then(() => {
+                console.log('then3');
+            });
+
+            console.log('end');
+        }
+
+        function testPromiseNested2() {
+            console.clear();
+            console.log('%c========== 例题2：不 return Promise ==========', 'color: #FF9800; font-size: 16px; font-weight: bold;');
+            
+            console.log('start');
+
+            new Promise((resolve) => {
+                console.log('promise1');
+                resolve();
+            })
+            .then(() => {
+                console.log('then1');
+                // ❌ 注意：没有 return！
+                new Promise((resolve) => {
+                    console.log('promise2');
+                    resolve();
+                })
+                .then(() => {
+                    console.log('then2');
+                });
+            })
+            .then(() => {
+                console.log('then3');
+            });
+
+            console.log('end');
+        }
+
+        function testPromiseNested3() {
+            console.clear();
+            console.log('%c========== 例题3：多层嵌套 ==========', 'color: #2196F3; font-size: 16px; font-weight: bold;');
+            
+            Promise.resolve()
+              .then(() => {
+                  console.log('then1');
+                  return Promise.resolve()
+                      .then(() => {
+                          console.log('then2');
+                      })
+                      .then(() => {
+                          console.log('then3');
+                      });
+              })
+              .then(() => {
+                  console.log('then4');
+              });
+
+            Promise.resolve()
+              .then(() => {
+                  console.log('then5');
+              })
+              .then(() => {
+                  console.log('then6');
+              });
+        }
+    </script>
+
+    <!-- ========== 新增：Promise 嵌套与 then 执行顺序（核心重点） ========== -->
+    <div class="section">
+        <h2>🎯 Promise 嵌套与 then 的执行顺序（高频考点）</h2>
+        
+        <div class="key-point">
+            <h3>⚠️ 为什么要讲这个？</h3>
+            <p style="font-size: 16px; line-height: 1.8;">
+                <strong>这是宏任务微任务中最容易出错的部分！</strong><br>
+                很多人以为微任务都是按顺序执行，但 <strong>Promise 链式调用时，执行顺序受返回值影响</strong>。<br>
+                这不仅是面试高频题，也是实际开发中容易出 Bug 的地方！
+            </p>
+        </div>
+
+        <h3>核心原理：.then() 返回值的影响</h3>
+        <div class="code-block">
+<pre><strong>规则1：.then() 返回普通值</strong>
+Promise.resolve()
+  .then(() => {
+      return 'hello';  // 返回普通值
+  })
+  .then((value) => {
+      console.log(value);  // 下一个微任务立即执行
+  });
+
+<strong>规则2：.then() 返回 Promise</strong>
+Promise.resolve()
+  .then(() => {
+      return new Promise(resolve => {  // 返回 Promise
+          resolve();
+      }).then(() => {
+          console.log('inner');
+      });
+  })
+  .then(() => {
+      console.log('outer');  // 必须等 inner 完成！
+  });
+
+// 输出：inner → outer</pre>
+        </div>
+
+        <h3>例题1：经典的嵌套 Promise（必考）</h3>
+        <div class="code-block">
+<pre>console.log('start');
+
+new Promise((resolve) => {
+    console.log('promise1');
+    resolve();
+})
+.then(() => {
+    console.log('then1');
+    return new Promise((resolve) => {
+        console.log('promise2');
+        resolve();
+    })
+    .then(() => {
+        console.log('then2');
+    });
+})
+.then(() => {
+    console.log('then3');
+});
+
+console.log('end');</pre>
+        </div>
+
+        <button onclick="testPromiseNested1()" style="font-size: 16px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0;">
+            🚀 运行例题1（打开控制台查看结果）
+        </button>
+
+        <div class="output">
+            <h4>输出顺序：</h4>
+            <pre>start
+promise1
+end
+then1
+promise2
+then2
+then3</pre>
+        </div>
+
+        <div class="explanation">
+            <h4>详细分析：</h4>
+            <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <thead>
+                    <tr style="background: #2196F3; color: white;">
+                        <th style="padding: 10px; border: 1px solid #ddd;">步骤</th>
+                        <th style="padding: 10px; border: 1px solid #ddd;">执行内容</th>
+                        <th style="padding: 10px; border: 1px solid #ddd;">微任务队列</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ddd;">1</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">打印 <code>start</code>（同步）</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[]</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ddd;">2</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">Promise 构造函数，打印 <code>promise1</code></td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[]</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ddd;">3</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;"><code>resolve()</code>，第一个 then 进队</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[then1]</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ddd;">4</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">打印 <code>end</code>（同步）</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[then1]</td>
+                    </tr>
+                    <tr style="background: #e3f2fd;">
+                        <td style="padding: 8px; border: 1px solid #ddd;">5</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">执行微任务 then1，打印 <code>then1</code></td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[]</td>
+                    </tr>
+                    <tr style="background: #e3f2fd;">
+                        <td style="padding: 8px; border: 1px solid #ddd;">6</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">创建新 Promise，打印 <code>promise2</code></td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[]</td>
+                    </tr>
+                    <tr style="background: #e3f2fd;">
+                        <td style="padding: 8px; border: 1px solid #ddd;">7</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;"><code>resolve()</code>，then2 进队</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[then2]</td>
+                    </tr>
+                    <tr style="background: #fff3e0;">
+                        <td style="padding: 8px; border: 1px solid #ddd;">8</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;"><strong>⚠️ 关键：</strong>第一个 then 返回了 Promise 链<br>then3 必须等这个链完成</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[then2]</td>
+                    </tr>
+                    <tr style="background: #e8f5e9;">
+                        <td style="padding: 8px; border: 1px solid #ddd;">9</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">执行微任务 then2，打印 <code>then2</code></td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[]</td>
+                    </tr>
+                    <tr style="background: #e8f5e9;">
+                        <td style="padding: 8px; border: 1px solid #ddd;">10</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">Promise 链完成，then3 进队</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[then3]</td>
+                    </tr>
+                    <tr style="background: #e8f5e9;">
+                        <td style="padding: 8px; border: 1px solid #ddd;">11</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">执行微任务 then3，打印 <code>then3</code></td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">[]</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>例题2：如果不 return Promise 会怎样？</h3>
+        <div class="code-block">
+<pre>console.log('start');
+
+new Promise((resolve) => {
+    console.log('promise1');
+    resolve();
+})
+.then(() => {
+    console.log('then1');
+    // ❌ 注意：没有 return！
+    new Promise((resolve) => {
+        console.log('promise2');
+        resolve();
+    })
+    .then(() => {
+        console.log('then2');
+    });
+})
+.then(() => {
+    console.log('then3');
+});
+
+console.log('end');</pre>
+        </div>
+
+        <button onclick="testPromiseNested2()" style="font-size: 16px; padding: 10px 20px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0;">
+            🚀 运行例题2（无 return 的情况）
+        </button>
+
+        <div class="output">
+            <h4>输出顺序：</h4>
+            <pre>start
+promise1
+end
+then1
+promise2
+then2
+then3</pre>
+            <p style="color: #FF9800; font-weight: bold;">注意：顺序和例题1相同！</p>
+        </div>
+
+        <div class="explanation">
+            <h4>⚠️ 重要发现：return 不影响顺序（在这个例子中）</h4>
+            <ul style="font-size: 16px; line-height: 1.8;">
+                <li><strong>虽然没有 return Promise</strong>，但输出顺序和例题1完全相同</li>
+                <li><strong>原因：.then() 的注册时机决定执行顺序</strong>
+                    <ul>
+                        <li>执行 then1 时，内部创建新 Promise 并立即 resolve</li>
+                        <li>内部的 then2 立即注册进微任务队列</li>
+                        <li>第一个 .then 返回 undefined，then3 也注册进微任务队列</li>
+                        <li>但 then2 先注册，所以先执行</li>
+                    </ul>
+                </li>
+                <li><strong>对比例题1（有 return）：</strong>
+                    <ul>
+                        <li>例题1：return Promise → then3 等待整个 Promise 链</li>
+                        <li>例题2：不 return → then3 不等待，但因为 then2 先注册，仍然先执行</li>
+                        <li><strong>结果：两种情况顺序相同！</strong></li>
+                    </ul>
+                </li>
+                <li><strong>结论：</strong>在这个特定场景中，return 不改变执行顺序</li>
+            </ul>
+        </div>
+
+        <h3>例题3：多层嵌套（难度升级）</h3>
+        <div class="code-block">
+<pre>Promise.resolve()
+  .then(() => {
+      console.log('then1');
+      return Promise.resolve()
+          .then(() => {
+              console.log('then2');
+          })
+          .then(() => {
+              console.log('then3');
+          });
+  })
+  .then(() => {
+      console.log('then4');
+  });
+
+Promise.resolve()
+  .then(() => {
+      console.log('then5');
+  })
+  .then(() => {
+      console.log('then6');
+  });</pre>
+        </div>
+
+        <button onclick="testPromiseNested3()" style="font-size: 16px; padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0;">
+            🚀 运行例题3（多个 Promise 链交替执行）
+        </button>
+
+        <div class="output">
+            <h4>输出顺序：</h4>
+            <pre>then1
+then5
+then2
+then6
+then3
+then4</pre>
+        </div>
+
+        <div class="explanation">
+            <h4>执行过程：</h4>
+            <ol style="font-size: 16px; line-height: 1.8;">
+                <li><strong>微任务队列：</strong>[then1, then5]</li>
+                <li>执行 then1，输出 <code>then1</code>，返回 Promise 链</li>
+                <li><strong>微任务队列：</strong>[then5, then2]</li>
+                <li>执行 then5，输出 <code>then5</code></li>
+                <li><strong>微任务队列：</strong>[then2, then6]</li>
+                <li>执行 then2，输出 <code>then2</code></li>
+                <li><strong>微任务队列：</strong>[then6, then3]</li>
+                <li>执行 then6，输出 <code>then6</code></li>
+                <li><strong>微任务队列：</strong>[then3]</li>
+                <li>执行 then3，输出 <code>then3</code>，Promise 链完成</li>
+                <li><strong>微任务队列：</strong>[then4]</li>
+                <li>执行 then4，输出 <code>then4</code></li>
+            </ol>
+        </div>
+
+        <h3>🎓 总结：重要规则</h3>
+        <div class="key-point">
+            <ol style="font-size: 16px; line-height: 2;">
+                <li><strong>核心原则：.then() 的注册时机决定执行顺序</strong>
+                    <ul>
+                        <li>不是 return，而是什么时候调用 .then()</li>
+                        <li>先注册进微任务队列的先执行（FIFO）</li>
+                    </ul>
+                </li>
+                <li><strong>.then() 返回 Promise：</strong>
+                    <ul>
+                        <li>下一个 .then() 必须等这个 Promise <strong>及其所有链式 .then()</strong> 完成</li>
+                        <li>例题1 和例题3 就是这种情况</li>
+                    </ul>
+                </li>
+                <li><strong>.then() 不 return 或返回普通值：</strong>
+                    <ul>
+                        <li>下一个 .then() 会立即注册进微任务队列</li>
+                        <li><strong>但不代表立即执行</strong>（还要看队列中的顺序）</li>
+                        <li>例题2 说明：即使不 return，内部 Promise 的 .then 可能先注册，所以先执行</li>
+                    </ul>
+                </li>
+                <li><strong>多个独立的 Promise 链：</strong>
+                    <ul>
+                        <li>它们的 .then() 会交替进入微任务队列</li>
+                        <li>遵循"先进先出"原则</li>
+                        <li>例题3 展示了这种交替执行</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="key-point" style="background: #fff3e0; border-left-color: #ff9800;">
+            <h3>📝 面试标准回答</h3>
+            <p><strong>问：为什么 Promise 嵌套时，内层 then 会先于外层 then 执行？</strong></p>
+            <p style="color: #d84315; font-weight: bold;">答：</p>
+            <ul style="font-size: 16px; line-height: 1.8;">
+                <li>✅ "当 .then() 返回一个 Promise 时，外层的下一个 .then() 必须等待这个 Promise 完成"</li>
+                <li>✅ "这是 Promise/A+ 规范规定的：.then() 返回的 Promise 会被'解包'（unwrap）"</li>
+                <li>✅ "如果返回的 Promise 还有 .then() 链，所有这些 .then() 都会优先执行"</li>
+                <li>✅ "只有当整个返回的 Promise 链完成后，外层的下一个 .then() 才会进入微任务队列"</li>
+                <li>✅ "这确保了 Promise 链的正确执行顺序，符合异步编程的语义"</li>
+            </ul>
+        </div>
+
+        <h3>💡 实际应用场景</h3>
+        <div class="code-block">
+<pre><strong>场景：多个接口依赖调用</strong>
+// ❌ 错误写法（可能出现执行顺序问题）
+getUserInfo()
+  .then(user => {
+      getOrders(user.id).then(orders => {
+          console.log('orders:', orders);
+      });
+  })
+  .then(() => {
+      console.log('done');  // 可能在 orders 之前输出！
+  });
+
+// ✅ 正确写法
+getUserInfo()
+  .then(user => {
+      return getOrders(user.id);  // return Promise
+  })
+  .then(orders => {
+      console.log('orders:', orders);
+  })
+  .then(() => {
+      console.log('done');  // 保证在 orders 之后
+  });</pre>
+        </div>
+    </div>
+
+</body>
+</html>
